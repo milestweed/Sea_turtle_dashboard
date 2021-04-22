@@ -1,0 +1,72 @@
+---
+title: "Seaturtle Data Exploration"
+author: "Miles Tweed"
+date: "4/16/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# The Dataset
+
+```{r}
+library(tidyverse)
+stdf <- read_csv('data/seaturtles.csv')
+stdf <- stdf %>% drop_na(dateIdentified)
+
+stdf.red <- stdf %>% select(date_year, scientificName, vernacularName, dateIdentified, organismID, basisOfRecord, decimalLatitude, decimalLongitude)
+
+stdf.red$dateIdentified <- sapply(stdf.red$dateIdentified, function(x){
+                                    splt <- strsplit(x, '-')[[1]]
+                                    if(length(splt) == 2){
+                                      x <- paste0(x, '-01')
+                                    }
+                                    return(x)
+                                  })
+stdf.red$dateIdentified <- as.Date(stdf.red$dateIdentified, "%Y-%m-%d")
+
+```
+
+
+```{r}
+names(stdf)
+```
+
+
+
+```{r}
+library(plotly)
+library(tidyverse)
+
+plotdf <- stdf  %>% 
+  filter(between(date_year,2018, 2021)) %>% 
+  select(scientificName, organismID, basisOfRecord, decimalLatitude,decimalLongitude) 
+
+# plotdf$hover <- with(plotdf, paste("<b>Scientific Name:</b>", scientificName, "<br>",
+#                               "<b>Organism ID:</b>", organismID,"<br>",
+#                               "<b>Observation Class:</b>", basisOfRecord,"<br>"))
+
+plot_ly(data = plotdf,
+        type = "scattermapbox",
+        mode = "markers",
+        lat = ~decimalLatitude,
+        lon = ~decimalLongitude,
+        color = "#b3f709",
+        hovertemplate = paste("<b>Scientific Name:</b>", plotdf$scientificName, "<br>",
+                              "<b>Organism ID:</b>", plotdf$organismID,"<br>",
+                              "<b>Observation Class:</b>", plotdf$basisOfRecord,"<br>",
+                              "<extra></extra>"),
+        hoverlabel = list(align = "left")) %>% 
+  layout(mapbox= list(
+    style = "white-bg",
+    zoom = 3,
+    center = list(lon = -93 ,lat= 41),
+    layers = list(list(
+      below = 'traces',
+      sourcetype = "raster",
+      source = list("https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}")))))
+
+```
+
