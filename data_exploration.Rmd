@@ -32,6 +32,7 @@ stdf.red$dateIdentified <- as.Date(stdf.red$dateIdentified, "%Y-%m-%d")
 
 ```{r}
 names(stdf)
+stdf %>% filter(!is.null(id), !is.null(maximumDepthInMeters))  %>% select(c(date_year, id, decimalLatitude, decimalLongitude, maximumDepthInMeters)) %>% group_by(id)
 ```
 
 
@@ -67,6 +68,66 @@ plot_ly(data = plotdf,
       below = 'traces',
       sourcetype = "raster",
       source = list("https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}")))))
+
+```
+
+
+
+
+
+```{r}
+library(tidyverse)
+idAnimals <- stdf %>% drop_na(organismID)
+
+
+length(unique(idAnimals$organismID))
+
+idAnimals <- idAnimals %>% separate_rows(organismID, sep = ';')
+
+idAnimals.redux <-  idAnimals %>% 
+  filter(!is.na(eventDate)) %>% 
+  select(c("date_year", 
+           "scientificName",
+           "individualCount",
+           "decimalLatitude",
+           "decimalLongitude",
+           "organismID",
+           "eventDate",
+           "vernacularName"))
+
+range(idAnimals.redux$date_year)
+```
+
+```{r}
+library(tsibble)
+idAnimals.redux$eventDate <- as.Date(idAnimals.redux$eventDate)
+idAnimals.redux$index <- c(1:length(idAnimals.redux$date_year))
+plotdf <- 
+  idAnimals.redux %>% 
+  filter(organismID == '08350 STINAPA') %>%  
+  as_tsibble(key = eventDate, index = index)
+
+
+
+plot_ly(data = plotdf,
+        type = "scattermapbox",
+        mode = "markers+lines",
+        lat = ~decimalLatitude,
+        lon = ~decimalLongitude,
+        color = "#cad41a",
+        hovertemplate = paste("<b>Event Date:</b>", plotdf$eventDate, "<br>",
+                              "<b>Vernacular Name:</b>", plotdf$vernacularName, "<br>",
+                              "<b>Organism ID:</b>", plotdf$organismID,"<br>",
+                              "<extra></extra>"),
+        hoverlabel = list(align = "left")) %>% 
+    layout(mapbox= list(
+        style = "white-bg",
+        zoom = 1,
+        center = list(lon = -80.8 ,lat= 26.933333),
+        layers = list(list(
+            below = 'traces',
+            sourcetype = "raster",
+            source = list("https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}")))))
 
 ```
 
