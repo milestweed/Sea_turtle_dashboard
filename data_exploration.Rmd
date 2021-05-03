@@ -138,8 +138,8 @@ locations$zoom <- zoom
 
 
 
-write_csv2(locations, '../data/locations.csv')
-write_csv2(idAnimals.Final, '../data/finalAnimals.csv')
+write_csv(locations, './data/locations.csv')
+write_csv(idAnimals.Final, './data/finalAnimals.csv')
 
 ```
 
