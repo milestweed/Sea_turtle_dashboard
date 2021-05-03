@@ -27,7 +27,7 @@ ui <- fluidPage(
 server <- function(input, output) {
   output$turt_image <- renderPlot({
     x = input$turt
-    all = list.files(path = "/Users/Hutch/Desktop/t_image", pattern = ".jpg", full.names = T)
+    all = list.files(path = "./t_image", pattern = ".jpg", full.names = T)
   
     if (input$turt==1){x = 1}
     if (input$turt==2){x = 2}

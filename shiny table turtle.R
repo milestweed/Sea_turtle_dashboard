@@ -16,10 +16,11 @@ library(ggplot2)  # for the diamonds dataset
 library(readxl)
 
 
-df7 = read_excel('/Users/Hutch/Desktop/turtle_chart3.xlsx',
+df7 = read_excel('../data/turtle_chart3.xlsx',
 col_names=c("name","scientific name","weight","length","longevity","food","fun facts","nesting","geography","migration"),skip = 1)
 
-df6 = read_excel('/Users/Hutch/Desktop/turtle_chart3.xlsx', skip = 1)
+df6 = read_excel('../data/turtle_chart3.xlsx', skip = 1)
+
 
 Turtles = df6
 ui <- fluidPage(

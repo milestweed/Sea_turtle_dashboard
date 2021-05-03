@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(tidyverse)
-stdf <- read_csv('data/seaturtles.csv')
+stdf <- read_csv('../data/seaturtles.csv')
 stdf <- stdf %>% drop_na(dateIdentified)
 
 stdf.red <- stdf %>% select(date_year, scientificName, vernacularName, dateIdentified, organismID, basisOfRecord, decimalLatitude, decimalLongitude)
@@ -73,14 +73,19 @@ plot_ly(data = plotdf,
 
 
 
+```{r}
+selected <- read_csv('../data/selected_turtle.csv')
+selected
+```
 
+
+# DATASET CREATION
 
 ```{r}
 library(tidyverse)
+library(lubridate)
+library(slider)
 idAnimals <- stdf %>% drop_na(organismID)
-
-
-length(unique(idAnimals$organismID))
 
 idAnimals <- idAnimals %>% separate_rows(organismID, sep = ';')
 
@@ -93,9 +98,49 @@ idAnimals.redux <-  idAnimals %>%
            "decimalLongitude",
            "organismID",
            "eventDate",
-           "vernacularName"))
+           "vernacularName")) 
 
-range(idAnimals.redux$date_year)
+idAnimals.redux$eventDate <- as.Date(idAnimals.redux$eventDate)
+idAnimals.redux$index <- c(1:length(idAnimals.redux$date_year))
+
+idAnimals.redux$vernacularName <- 
+sapply(idAnimals.redux$vernacularName, function(x){
+  if (grepl("sea turtle", x, ignore.case = TRUE)) {
+    sp.x <- strsplit(x, ' ')
+    end.at <- (length(sp.x[[1]])-2)
+    return(paste(sp.x[[1]][1:end.at]))
+  } else {return(x)}
+})
+
+turtleLoc <- read_csv('../data/turtleLocation.csv')
+turtleLoc
+
+
+idAnimals.Final <- idAnimals.redux %>%  filter(organismID %in% turtleLoc$ID)
+
+idAnimals.Final$locationName <-
+sapply(idAnimals.Final$organismID, function(x){
+  loc <- turtleLoc %>% filter(ID == x)
+  return(loc[,'General Areas'][[1]])
+})
+
+
+
+locations <- data_frame(location=sort(unique(turtleLoc$`General Areas`)))
+lats <- c(32.2071182056275,-8.795402923767782,36.54077343951718,35.268083861585446,39.845830024793436, -18.74910861450977,16.82619835233321,7.072922001367506)
+
+lons <- c(-64.62952031277278,48.71916711100263,18.462904485503884,-46.773868407423585,-178.74575083249982,-15.510247341130118,107.33069167962653, -113.74725917366027)
+
+zoom <- c(2,2,2,2,2,2,2,2)
+locations$lats <- lats
+locations$lons <- lons
+locations$zoom <- zoom
+
+
+
+write_csv2(locations, '../data/locations.csv')
+write_csv2(idAnimals.Final, '../data/finalAnimals.csv')
+
 ```
 
 ```{r}
@@ -104,16 +149,24 @@ idAnimals.redux$eventDate <- as.Date(idAnimals.redux$eventDate)
 idAnimals.redux$index <- c(1:length(idAnimals.redux$date_year))
 plotdf <- 
   idAnimals.redux %>% 
-  filter(organismID == '08350 STINAPA') %>%  
-  as_tsibble(key = eventDate, index = index)
+  filter(organismID == '18262') %>%  
+  as_tsibble(key = eventDate, index = index)%>% 
+        mutate(sevenDayAvgLat = slide_index_dbl(.x = decimalLatitude,
+                                            .i = eventDate,
+                                            .f = mean,
+                                            .before = 7),
+               sevenDayAvgLon = slide_index_dbl(.x = decimalLongitude,
+                                            .i = eventDate,
+                                            .f = mean,
+                                            .before = 7))
 
 
 
 plot_ly(data = plotdf,
         type = "scattermapbox",
         mode = "markers+lines",
-        lat = ~decimalLatitude,
-        lon = ~decimalLongitude,
+        lat = ~sevenDayAvgLat,
+        lon = ~sevenDayAvgLon,
         color = "#cad41a",
         hovertemplate = paste("<b>Event Date:</b>", plotdf$eventDate, "<br>",
                               "<b>Vernacular Name:</b>", plotdf$vernacularName, "<br>",
@@ -131,3 +184,116 @@ plot_ly(data = plotdf,
 
 ```
 
+
+```{r}
+library(plotly)
+library(tidyverse)
+
+plotdf <- idAnimals  %>% 
+  filter(ownerInstitutionCode=='Sea Turtle Conservation Bonaire') %>% 
+  select(scientificName, organismID,vernacularName, basisOfRecord, decimalLatitude,decimalLongitude) 
+
+# plotdf$hover <- with(plotdf, paste("<b>Scientific Name:</b>", scientificName, "<br>",
+#                               "<b>Organism ID:</b>", organismID,"<br>",
+#                               "<b>Observation Class:</b>", basisOfRecord,"<br>"))
+
+plot_ly(data = plotdf,
+        type = "scattermapbox",
+        mode = "markers",
+        lat = ~decimalLatitude,
+        lon = ~decimalLongitude,
+        color = "#b3f709",
+        hovertemplate = paste("<b>Scientific Name:</b>", plotdf$scientificName, "<br>",
+                              "<b>Organism ID:</b>", plotdf$organismID,"<br>",
+                              "<b>Vernacular Name:</b>", plotdf$vernacularName,"<br>",
+                              "<extra></extra>"),
+        hoverlabel = list(align = "left")) %>% 
+  layout(mapbox= list(
+    style = "white-bg",
+    zoom = 3,
+    center = list(lon = -93 ,lat= 41),
+    layers = list(list(
+      below = 'traces',
+      sourcetype = "raster",
+      source = list("https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}")))))
+
+```
+
+
+```{r}
+library(plotly)
+library(tidyverse)
+
+plotdf <- idAnimals  %>% 
+  filter(ownerInstitutionCode=='DUML') %>% 
+  select(scientificName, organismID,vernacularName, basisOfRecord, decimalLatitude,decimalLongitude) 
+
+# plotdf$hover <- with(plotdf, paste("<b>Scientific Name:</b>", scientificName, "<br>",
+#                               "<b>Organism ID:</b>", organismID,"<br>",
+#                               "<b>Observation Class:</b>", basisOfRecord,"<br>"))
+
+plot_ly(data = plotdf,
+        type = "scattermapbox",
+        mode = "markers",
+        lat = ~decimalLatitude,
+        lon = ~decimalLongitude,
+        color = "#b3f709",
+        hovertemplate = paste("<b>Scientific Name:</b>", plotdf$scientificName, "<br>",
+                              "<b>Organism ID:</b>", plotdf$organismID,"<br>",
+                              "<b>Vernacular Name:</b>", plotdf$vernacularName,"<br>",
+                              "<extra></extra>"),
+        hoverlabel = list(align = "left")) %>% 
+  layout(mapbox= list(
+    style = "white-bg",
+    zoom = 3,
+    center = list(lon = -93 ,lat= 41),
+    layers = list(list(
+      below = 'traces',
+      sourcetype = "raster",
+      source = list("https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}")))))
+
+```
+
+
+```{r}
+library(tidyverse)
+library(tsibble)
+library(slider)
+library(plotly)
+
+plotdf <- 
+  idAnimals.redux %>% 
+  filter(vernacularName == "Kemp's Ridley") %>%  
+  as_tsibble(key = eventDate, index = index)%>% 
+        mutate(sevenDayAvgLat = slide_index_dbl(.x = decimalLatitude,
+                                            .i = eventDate,
+                                            .f = mean,
+                                            .before = 7),
+               sevenDayAvgLon = slide_index_dbl(.x = decimalLongitude,
+                                            .i = eventDate,
+                                            .f = mean,
+                                            .before = 7))
+
+
+
+plot_ly(data = plotdf,
+        type = "scattermapbox",
+        mode = "markers+lines",
+        lat = ~sevenDayAvgLat,
+        lon = ~sevenDayAvgLon,
+        color = "#cad41a",
+        hovertemplate = paste("<b>Event Date:</b>", plotdf$eventDate, "<br>",
+                              "<b>Vernacular Name:</b>", plotdf$vernacularName, "<br>",
+                              "<b>Organism ID:</b>", plotdf$organismID,"<br>",
+                              "<extra></extra>"),
+        hoverlabel = list(align = "left")) %>% 
+    layout(mapbox= list(
+        style = "white-bg",
+        zoom = 1,
+        center = list(lon = -80.8 ,lat= 26.933333),
+        layers = list(list(
+            below = 'traces',
+            sourcetype = "raster",
+            source = list("https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}")))))
+
+```
