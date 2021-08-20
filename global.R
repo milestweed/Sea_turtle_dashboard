@@ -1,6 +1,8 @@
 library(shiny)
 library(shinydashboard)
+library(tidyverse)
 library(readxl)
 animals <- read_csv('./data/finalAnimals.csv')
+animals$vernacularName <- as.factor(animals$vernacularName)
 locations <- read_csv('./data/locations.csv')
 Turtles = read_excel('./data/turtle_chart3.xlsx', skip = 1)

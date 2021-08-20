@@ -1,0 +1,14 @@
+name: Sea_turtle_dashboard
+title: Sea_turtle_dashboard
+username:
+account: mtweed
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4073285
+bundleId: 4553010
+url: https://mtweed.shinyapps.io/Sea_turtle_dashboard/
+when: 1620084966.63177
+lastSyncTime: 1620084966.6318
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: data_exploration.Rmd|green.RData|kemp.RData|leather.RData|locations.csv|loggerhead.RData|README.md|shiny for turtle images 4 28 21.R|shiny table turtle.R|ui_old.R
